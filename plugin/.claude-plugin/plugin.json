@@ -1,0 +1,11 @@
+{
+  "name": "walkie-talkie",
+  "version": "1.0.0",
+  "description": "Real-time messaging between Claude Code instances",
+  "mcpServers": {
+    "walkie-talkie": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/dist/mcp-server.mjs"]
+    }
+  }
+}

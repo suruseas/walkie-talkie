@@ -1,0 +1,19 @@
+{
+  "name": "walkie-talkie",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "hub",
+    "mcp-server"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "clean": "npm run clean --workspaces",
+    "start": "npm start --workspace=hub",
+    "bundle": "node scripts/bundle.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "@walkie-talkie/mcp-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "walkie-talkie-mcp": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "@types/node": "^22.0.0"
+  }
+}

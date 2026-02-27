@@ -1,0 +1,18 @@
+{
+  "name": "suruseas",
+  "owner": { "name": "suruseas" },
+  "metadata": {
+    "description": "Claude Code plugins by suruseas"
+  },
+  "plugins": [
+    {
+      "name": "walkie-talkie",
+      "source": "./plugin",
+      "description": "Real-time messaging between Claude Code instances",
+      "version": "1.0.0",
+      "author": {
+        "name": "suruseas"
+      }
+    }
+  ]
+}
