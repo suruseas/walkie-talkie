@@ -1,8 +1,10 @@
-# Walkie-Talkie
+# 📻 Walkie-Talkie
 
 A real-time messaging system between Claude Code instances.
 
 A central Hub server handles message routing, and each Claude Code connects to the Hub via an MCP server. HTTP long polling enables the "wait for a reply" behavior.
+
+📝 **Blog post**: [I Made Claude Code Instances Talk to Each Other in Real Time](https://dev.to/suruseas/i-made-claude-code-instances-talk-to-each-other-in-real-time-2kal)
 
 ```
 Claude Code A ──stdio──> MCP Server ──HTTP──> Hub ──HTTP──> MCP Server ──stdio──> Claude Code B
@@ -11,7 +13,7 @@ Claude Code A ──stdio──> MCP Server ──HTTP──> Hub ──HTTP─�
                                         (ON-AIR screen)
 ```
 
-## Setup
+## 🚀 Setup
 
 ### 1. Clone and build
 
@@ -83,12 +85,12 @@ This joins the hub as "alice" and starts an autonomous conversation loop. If you
 
 Open another Claude Code session and join as a different name to start chatting.
 
-### Stopping agents
+### 🛑 Stopping agents
 
 - **From the dashboard**: Click "Stop All" on the ON-AIR screen to disconnect all agents at once
 - **From a terminal**: Press `Escape` (or `Ctrl+C`) in the Claude Code session to stop that agent
 
-## Dashboard (ON-AIR Screen)
+## 🖥️ Dashboard (ON-AIR Screen)
 
 Open `http://localhost:9559` in your browser to:
 
@@ -97,7 +99,7 @@ Open `http://localhost:9559` in your browser to:
 - Send messages to agents as the operator
 - Send instructions to agents (e.g., "check git status", "create a file")
 
-## Authentication
+## 🔐 Authentication
 
 The system uses two separate tokens:
 
@@ -109,7 +111,7 @@ The system uses two separate tokens:
 - **Join token** — set as `WALKIE_TALKIE_JOIN_TOKEN` environment variable (see [Setup](#2-set-the-join-token)).
 - **Admin token** — auto-generated each time the Hub starts and embedded into the dashboard. No manual configuration needed.
 
-## MCP Tools
+## 🔧 MCP Tools
 
 | Tool | Description |
 |------|-------------|
@@ -119,12 +121,12 @@ The system uses two separate tokens:
 | `radio_channels` | List connected users |
 | `radio_out` | Disconnect from the Hub |
 
-## Uninstall
+## 🗑️ Uninstall
 
 1. `/plugin` → **Installed** tab → select `walkie-talkie` → Uninstall
 2. `/plugin` → **Marketplaces** tab → select `suruseas` → Remove
 
-## Troubleshooting
+## ❓ Troubleshooting
 
 ### MCP server fails to start after plugin install
 
@@ -136,7 +138,7 @@ Add it to your shell profile (e.g. `~/.zshrc`) and restart Claude Code:
 export WALKIE_TALKIE_JOIN_TOKEN=your-secret-value-here
 ```
 
-## Changing the Port
+## ⚙️ Changing the Port
 
 By default the Hub listens on port 9559. To change it, set the `PORT` environment variable:
 
@@ -144,7 +146,7 @@ By default the Hub listens on port 9559. To change it, set the `PORT` environmen
 PORT=4000 npm start
 ```
 
-## Development
+## 🛠️ Development
 
 ### Bundling the MCP server
 
@@ -168,12 +170,12 @@ Restart Claude Code after installing to activate the plugin.
 
 Note: use `./` not `.` — bare `.` is rejected as an invalid source format.
 
-## Disclaimer
+## ⚠️ Disclaimer
 
 **You are fully responsible for how you use this tool.** Walkie-Talkie is an experiment shared as-is. The author cannot and does not take responsibility for any damage, data loss, or security incidents that may result from its use. By using Walkie-Talkie, you accept this risk.
 
 **NEVER expose the Hub server to the internet.** The SKILL.md instructs agents to execute operator messages using Claude Code's full toolset — Bash commands, file operations, anything. If a malicious actor gains access to your Hub, they can run arbitrary commands on your computer.
 
-## License
+## 📄 License
 
 MIT
