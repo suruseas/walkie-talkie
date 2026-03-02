@@ -102,12 +102,15 @@ export class HubClient {
     token: string,
     to: string,
     content: string,
+    channel?: string,
   ): Promise<{ id: string; to: string }> {
+    const body: { to: string; content: string; channel?: string } = { to, content };
+    if (channel) body.channel = channel;
     const res = await this.request<{ id: string; to: string }>({
       method: "POST",
       path: "/send",
       token,
-      body: { to, content },
+      body,
     });
     if (res.status !== 200) {
       throw new Error((res.data as { error?: string }).error ?? "Send failed");
@@ -117,9 +120,9 @@ export class HubClient {
 
   async poll(
     token: string,
-  ): Promise<{ messages: Array<{ id: string; from: string; to: string; content: string; timestamp: number }> } | null> {
+  ): Promise<{ messages: Array<{ id: string; from: string; to: string; content: string; channel: string; timestamp: number }> } | null> {
     const res = await this.request<{
-      messages: Array<{ id: string; from: string; to: string; content: string; timestamp: number }>;
+      messages: Array<{ id: string; from: string; to: string; content: string; channel: string; timestamp: number }>;
     }>({
       method: "GET",
       path: "/poll",
@@ -143,5 +146,66 @@ export class HubClient {
       throw new Error((res.data as { error?: string }).error ?? "Failed to get users");
     }
     return res.data.users;
+  }
+
+  async listChannels(token: string): Promise<Array<{ name: string; memberCount: number; createdBy: string }>> {
+    const res = await this.request<{ channels: Array<{ name: string; memberCount: number; createdBy: string }> }>({
+      method: "GET",
+      path: "/channels",
+      token,
+    });
+    if (res.status !== 200) {
+      throw new Error((res.data as { error?: string }).error ?? "Failed to list channels");
+    }
+    return res.data.channels;
+  }
+
+  async createChannel(token: string, name: string): Promise<{ channel: string }> {
+    const res = await this.request<{ ok: boolean; channel: string }>({
+      method: "POST",
+      path: "/channel-create",
+      token,
+      body: { name },
+    });
+    if (res.status !== 200) {
+      throw new Error((res.data as { error?: string }).error ?? "Failed to create channel");
+    }
+    return { channel: res.data.channel };
+  }
+
+  async joinChannel(token: string, channel: string): Promise<void> {
+    const res = await this.request({
+      method: "POST",
+      path: "/channel-join",
+      token,
+      body: { channel },
+    });
+    if (res.status !== 200) {
+      throw new Error((res.data as { error?: string }).error ?? "Failed to join channel");
+    }
+  }
+
+  async leaveChannel(token: string, channel: string): Promise<void> {
+    const res = await this.request({
+      method: "POST",
+      path: "/channel-leave",
+      token,
+      body: { channel },
+    });
+    if (res.status !== 200) {
+      throw new Error((res.data as { error?: string }).error ?? "Failed to leave channel");
+    }
+  }
+
+  async inviteToChannel(token: string, channel: string, user: string): Promise<void> {
+    const res = await this.request({
+      method: "POST",
+      path: "/channel-invite",
+      token,
+      body: { channel, user },
+    });
+    if (res.status !== 200) {
+      throw new Error((res.data as { error?: string }).error ?? "Failed to invite user to channel");
+    }
   }
 }

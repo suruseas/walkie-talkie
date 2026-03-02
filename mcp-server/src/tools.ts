@@ -39,7 +39,7 @@ export function createMcpServer(hubUrl: string, joinTok: string): McpServer {
           content: [
             {
               type: "text" as const,
-              text: `Registered as "${currentName}". You can now send and receive messages.`,
+              text: `Registered as "${currentName}". You are now in #all. You can now send and receive messages.`,
             },
           ],
         };
@@ -56,12 +56,13 @@ export function createMcpServer(hubUrl: string, joinTok: string): McpServer {
 
   server.tool(
     "radio_over",
-    "Send a message to another user. Use @name format for the recipient, or @all to broadcast.",
+    "Send a message to another user. Use @name format for the recipient, or @all to broadcast. Messages are scoped to a channel.",
     {
       to: z.string().describe("Recipient: @name or @all"),
       message: z.string().describe("Message content"),
+      channel: z.string().optional().describe("Channel to send to (default: #all)"),
     },
-    async ({ to, message }) => {
+    async ({ to, message, channel }) => {
       if (!currentToken) {
         return {
           content: [
@@ -71,12 +72,12 @@ export function createMcpServer(hubUrl: string, joinTok: string): McpServer {
         };
       }
       try {
-        const result = await client.send(currentToken, to, message);
+        const result = await client.send(currentToken, to, message, channel);
         return {
           content: [
             {
               type: "text" as const,
-              text: `Message sent to ${result.to} (id: ${result.id})`,
+              text: `Message sent to ${result.to} in ${channel || "#all"} (id: ${result.id})`,
             },
           ],
         };
@@ -126,7 +127,7 @@ export function createMcpServer(hubUrl: string, joinTok: string): McpServer {
           };
         }
         const formatted = result.messages
-          .map((m) => `[${new Date(m.timestamp).toLocaleTimeString()}] ${m.from} → ${m.to}: ${m.content}`)
+          .map((m) => `[${new Date(m.timestamp).toLocaleTimeString()}] ${m.channel || "#all"} ${m.from} → ${m.to}: ${m.content}`)
           .join("\n");
         return {
           content: [{ type: "text" as const, text: formatted }],
@@ -155,7 +156,7 @@ export function createMcpServer(hubUrl: string, joinTok: string): McpServer {
 
   server.tool(
     "radio_channels",
-    "List all currently connected users on the hub.",
+    "List all currently connected users on the hub and available channels.",
     {},
     async () => {
       if (!currentToken) {
@@ -167,14 +168,21 @@ export function createMcpServer(hubUrl: string, joinTok: string): McpServer {
         };
       }
       try {
-        const users = await client.users(currentToken);
+        const [users, channels] = await Promise.all([
+          client.users(currentToken),
+          client.listChannels(currentToken),
+        ]);
+        const userText = users.length > 0
+          ? `Connected users: ${users.join(", ")}`
+          : "No users connected.";
+        const channelText = channels.length > 0
+          ? `Channels: ${channels.map((c) => `${c.name} (${c.memberCount} members)`).join(", ")}`
+          : "No channels.";
         return {
           content: [
             {
               type: "text" as const,
-              text: users.length > 0
-                ? `Connected users: ${users.join(", ")}`
-                : "No users connected.",
+              text: `${userText}\n${channelText}`,
             },
           ],
         };
@@ -182,6 +190,145 @@ export function createMcpServer(hubUrl: string, joinTok: string): McpServer {
         return {
           content: [
             { type: "text" as const, text: `Failed: ${(e as Error).message}` },
+          ],
+          isError: true,
+        };
+      }
+    },
+  );
+
+  server.tool(
+    "radio_channel_create",
+    "Create a new channel on the hub. You will automatically join the channel.",
+    { name: z.string().describe("Channel name (with or without # prefix)") },
+    async ({ name }) => {
+      if (!currentToken) {
+        return {
+          content: [
+            { type: "text" as const, text: "Not on the air. Use radio_join first." },
+          ],
+          isError: true,
+        };
+      }
+      try {
+        const result = await client.createChannel(currentToken, name);
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Channel ${result.channel} created. You have been auto-joined.`,
+            },
+          ],
+        };
+      } catch (e) {
+        return {
+          content: [
+            { type: "text" as const, text: `Failed to create channel: ${(e as Error).message}` },
+          ],
+          isError: true,
+        };
+      }
+    },
+  );
+
+  server.tool(
+    "radio_channel_join",
+    "Join an existing channel to send and receive messages in it.",
+    { channel: z.string().describe("Channel name to join (e.g. #my-channel)") },
+    async ({ channel }) => {
+      if (!currentToken) {
+        return {
+          content: [
+            { type: "text" as const, text: "Not on the air. Use radio_join first." },
+          ],
+          isError: true,
+        };
+      }
+      try {
+        await client.joinChannel(currentToken, channel);
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Joined ${channel}.`,
+            },
+          ],
+        };
+      } catch (e) {
+        return {
+          content: [
+            { type: "text" as const, text: `Failed to join channel: ${(e as Error).message}` },
+          ],
+          isError: true,
+        };
+      }
+    },
+  );
+
+  server.tool(
+    "radio_channel_leave",
+    "Leave a channel. You cannot leave #all.",
+    { channel: z.string().describe("Channel name to leave") },
+    async ({ channel }) => {
+      if (!currentToken) {
+        return {
+          content: [
+            { type: "text" as const, text: "Not on the air. Use radio_join first." },
+          ],
+          isError: true,
+        };
+      }
+      try {
+        await client.leaveChannel(currentToken, channel);
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Left ${channel}.`,
+            },
+          ],
+        };
+      } catch (e) {
+        return {
+          content: [
+            { type: "text" as const, text: `Failed to leave channel: ${(e as Error).message}` },
+          ],
+          isError: true,
+        };
+      }
+    },
+  );
+
+  server.tool(
+    "radio_channel_invite",
+    "Invite another user to a channel. The user is automatically joined and notified via their next poll.",
+    {
+      channel: z.string().describe("Channel name to invite the user to"),
+      user: z.string().describe("User to invite (e.g. @agent-name)"),
+    },
+    async ({ channel, user }) => {
+      if (!currentToken) {
+        return {
+          content: [
+            { type: "text" as const, text: "Not on the air. Use radio_join first." },
+          ],
+          isError: true,
+        };
+      }
+      try {
+        await client.inviteToChannel(currentToken, channel, user);
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Invited ${user} to ${channel}.`,
+            },
+          ],
+        };
+      } catch (e) {
+        return {
+          content: [
+            { type: "text" as const, text: `Failed to invite: ${(e as Error).message}` },
           ],
           isError: true,
         };

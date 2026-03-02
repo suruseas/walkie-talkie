@@ -3,4 +3,8 @@ dist/
 !plugin/dist/
 .env
 .claude/settings.local.json
+.cursor/mcp.json
 docs/
+*.db
+*.db-wal
+*.db-shm

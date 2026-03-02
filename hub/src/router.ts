@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
 import type { Message } from "./types.js";
-import { isUserRegistered, getRegisteredUsers } from "./auth.js";
+import { isUserRegistered } from "./auth.js";
 import { deliverMessage } from "./polling.js";
+import { getChannelMembers, isChannelMember } from "./channels.js";
 
 const messageQueues = new Map<string, Message[]>();
 
@@ -27,9 +28,27 @@ export function routeMessage(
   from: string,
   to: string,
   content: string,
+  channel = "#all",
 ): Message {
+  const members = getChannelMembers(channel);
+
   if (to === "@all") {
-    return broadcastMessage(from, content);
+    const message: Message = {
+      id: randomUUID(),
+      from,
+      to: "@all",
+      content,
+      channel,
+      timestamp: Date.now(),
+    };
+
+    // Deliver to all channel members except sender
+    for (const user of members) {
+      if (user !== from) {
+        enqueueAndDeliver(user, message);
+      }
+    }
+    return message;
   }
 
   const targetName = to.startsWith("@") ? to.slice(1) : to;
@@ -38,34 +57,24 @@ export function routeMessage(
     throw new Error(`User "${targetName}" is not connected`);
   }
 
+  if (!isChannelMember(channel, targetName)) {
+    throw new Error(`User "${targetName}" is not a member of ${channel}`);
+  }
+
   const message: Message = {
     id: randomUUID(),
     from,
     to: targetName,
     content,
+    channel,
     timestamp: Date.now(),
   };
 
-  // Deliver to all connected users (except sender) so everyone can follow the conversation
-  const allUsers = getRegisteredUsers().filter((u) => u !== from);
-  for (const user of allUsers) {
-    enqueueAndDeliver(user, message);
-  }
-  return message;
-}
-
-function broadcastMessage(from: string, content: string): Message {
-  const users = getRegisteredUsers().filter((u) => u !== from);
-  const message: Message = {
-    id: randomUUID(),
-    from,
-    to: "@all",
-    content,
-    timestamp: Date.now(),
-  };
-
-  for (const user of users) {
-    enqueueAndDeliver(user, message);
+  // Deliver to all channel members except sender
+  for (const user of members) {
+    if (user !== from) {
+      enqueueAndDeliver(user, message);
+    }
   }
   return message;
 }

@@ -30166,12 +30166,14 @@ var HubClient = class {
       token
     });
   }
-  async send(token, to, content) {
+  async send(token, to, content, channel) {
+    const body = { to, content };
+    if (channel) body.channel = channel;
     const res = await this.request({
       method: "POST",
       path: "/send",
       token,
-      body: { to, content }
+      body
     });
     if (res.status !== 200) {
       throw new Error(res.data.error ?? "Send failed");
@@ -30202,6 +30204,62 @@ var HubClient = class {
       throw new Error(res.data.error ?? "Failed to get users");
     }
     return res.data.users;
+  }
+  async listChannels(token) {
+    const res = await this.request({
+      method: "GET",
+      path: "/channels",
+      token
+    });
+    if (res.status !== 200) {
+      throw new Error(res.data.error ?? "Failed to list channels");
+    }
+    return res.data.channels;
+  }
+  async createChannel(token, name) {
+    const res = await this.request({
+      method: "POST",
+      path: "/channel-create",
+      token,
+      body: { name }
+    });
+    if (res.status !== 200) {
+      throw new Error(res.data.error ?? "Failed to create channel");
+    }
+    return { channel: res.data.channel };
+  }
+  async joinChannel(token, channel) {
+    const res = await this.request({
+      method: "POST",
+      path: "/channel-join",
+      token,
+      body: { channel }
+    });
+    if (res.status !== 200) {
+      throw new Error(res.data.error ?? "Failed to join channel");
+    }
+  }
+  async leaveChannel(token, channel) {
+    const res = await this.request({
+      method: "POST",
+      path: "/channel-leave",
+      token,
+      body: { channel }
+    });
+    if (res.status !== 200) {
+      throw new Error(res.data.error ?? "Failed to leave channel");
+    }
+  }
+  async inviteToChannel(token, channel, user) {
+    const res = await this.request({
+      method: "POST",
+      path: "/channel-invite",
+      token,
+      body: { channel, user }
+    });
+    if (res.status !== 200) {
+      throw new Error(res.data.error ?? "Failed to invite user to channel");
+    }
   }
 };
 
@@ -30240,7 +30298,7 @@ function createMcpServer(hubUrl2, joinTok) {
           content: [
             {
               type: "text",
-              text: `Registered as "${currentName}". You can now send and receive messages.`
+              text: `Registered as "${currentName}". You are now in #all. You can now send and receive messages.`
             }
           ]
         };
@@ -30256,12 +30314,13 @@ function createMcpServer(hubUrl2, joinTok) {
   );
   server2.tool(
     "radio_over",
-    "Send a message to another user. Use @name format for the recipient, or @all to broadcast.",
+    "Send a message to another user. Use @name format for the recipient, or @all to broadcast. Messages are scoped to a channel.",
     {
       to: external_exports.string().describe("Recipient: @name or @all"),
-      message: external_exports.string().describe("Message content")
+      message: external_exports.string().describe("Message content"),
+      channel: external_exports.string().optional().describe("Channel to send to (default: #all)")
     },
-    async ({ to, message }) => {
+    async ({ to, message, channel }) => {
       if (!currentToken) {
         return {
           content: [
@@ -30271,12 +30330,12 @@ function createMcpServer(hubUrl2, joinTok) {
         };
       }
       try {
-        const result = await client.send(currentToken, to, message);
+        const result = await client.send(currentToken, to, message, channel);
         return {
           content: [
             {
               type: "text",
-              text: `Message sent to ${result.to} (id: ${result.id})`
+              text: `Message sent to ${result.to} in ${channel || "#all"} (id: ${result.id})`
             }
           ]
         };
@@ -30323,7 +30382,7 @@ function createMcpServer(hubUrl2, joinTok) {
             isError: true
           };
         }
-        const formatted = result.messages.map((m) => `[${new Date(m.timestamp).toLocaleTimeString()}] ${m.from} \u2192 ${m.to}: ${m.content}`).join("\n");
+        const formatted = result.messages.map((m) => `[${new Date(m.timestamp).toLocaleTimeString()}] ${m.channel || "#all"} ${m.from} \u2192 ${m.to}: ${m.content}`).join("\n");
         return {
           content: [{ type: "text", text: formatted }]
         };
@@ -30350,7 +30409,7 @@ function createMcpServer(hubUrl2, joinTok) {
   );
   server2.tool(
     "radio_channels",
-    "List all currently connected users on the hub.",
+    "List all currently connected users on the hub and available channels.",
     {},
     async () => {
       if (!currentToken) {
@@ -30362,12 +30421,18 @@ function createMcpServer(hubUrl2, joinTok) {
         };
       }
       try {
-        const users = await client.users(currentToken);
+        const [users, channels] = await Promise.all([
+          client.users(currentToken),
+          client.listChannels(currentToken)
+        ]);
+        const userText = users.length > 0 ? `Connected users: ${users.join(", ")}` : "No users connected.";
+        const channelText = channels.length > 0 ? `Channels: ${channels.map((c) => `${c.name} (${c.memberCount} members)`).join(", ")}` : "No channels.";
         return {
           content: [
             {
               type: "text",
-              text: users.length > 0 ? `Connected users: ${users.join(", ")}` : "No users connected."
+              text: `${userText}
+${channelText}`
             }
           ]
         };
@@ -30375,6 +30440,141 @@ function createMcpServer(hubUrl2, joinTok) {
         return {
           content: [
             { type: "text", text: `Failed: ${e.message}` }
+          ],
+          isError: true
+        };
+      }
+    }
+  );
+  server2.tool(
+    "radio_channel_create",
+    "Create a new channel on the hub. You will automatically join the channel.",
+    { name: external_exports.string().describe("Channel name (with or without # prefix)") },
+    async ({ name }) => {
+      if (!currentToken) {
+        return {
+          content: [
+            { type: "text", text: "Not on the air. Use radio_join first." }
+          ],
+          isError: true
+        };
+      }
+      try {
+        const result = await client.createChannel(currentToken, name);
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Channel ${result.channel} created. You have been auto-joined.`
+            }
+          ]
+        };
+      } catch (e) {
+        return {
+          content: [
+            { type: "text", text: `Failed to create channel: ${e.message}` }
+          ],
+          isError: true
+        };
+      }
+    }
+  );
+  server2.tool(
+    "radio_channel_join",
+    "Join an existing channel to send and receive messages in it.",
+    { channel: external_exports.string().describe("Channel name to join (e.g. #my-channel)") },
+    async ({ channel }) => {
+      if (!currentToken) {
+        return {
+          content: [
+            { type: "text", text: "Not on the air. Use radio_join first." }
+          ],
+          isError: true
+        };
+      }
+      try {
+        await client.joinChannel(currentToken, channel);
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Joined ${channel}.`
+            }
+          ]
+        };
+      } catch (e) {
+        return {
+          content: [
+            { type: "text", text: `Failed to join channel: ${e.message}` }
+          ],
+          isError: true
+        };
+      }
+    }
+  );
+  server2.tool(
+    "radio_channel_leave",
+    "Leave a channel. You cannot leave #all.",
+    { channel: external_exports.string().describe("Channel name to leave") },
+    async ({ channel }) => {
+      if (!currentToken) {
+        return {
+          content: [
+            { type: "text", text: "Not on the air. Use radio_join first." }
+          ],
+          isError: true
+        };
+      }
+      try {
+        await client.leaveChannel(currentToken, channel);
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Left ${channel}.`
+            }
+          ]
+        };
+      } catch (e) {
+        return {
+          content: [
+            { type: "text", text: `Failed to leave channel: ${e.message}` }
+          ],
+          isError: true
+        };
+      }
+    }
+  );
+  server2.tool(
+    "radio_channel_invite",
+    "Invite another user to a channel. The user is automatically joined and notified via their next poll.",
+    {
+      channel: external_exports.string().describe("Channel name to invite the user to"),
+      user: external_exports.string().describe("User to invite (e.g. @agent-name)")
+    },
+    async ({ channel, user }) => {
+      if (!currentToken) {
+        return {
+          content: [
+            { type: "text", text: "Not on the air. Use radio_join first." }
+          ],
+          isError: true
+        };
+      }
+      try {
+        await client.inviteToChannel(currentToken, channel, user);
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Invited ${user} to ${channel}.`
+            }
+          ]
+        };
+      } catch (e) {
+        return {
+          content: [
+            { type: "text", text: `Failed to invite: ${e.message}` }
           ],
           isError: true
         };

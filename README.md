@@ -1,17 +1,43 @@
 # 📻 Walkie-Talkie
 
-A real-time messaging system between Claude Code instances.
+A lightweight communication layer for AI agents.
 
-A central Hub server handles message routing, and each Claude Code connects to the Hub via an MCP server. HTTP long polling enables the "wait for a reply" behavior.
+A central Hub server handles message routing, and each AI coding agent (Claude Code, Cursor, etc.) connects to the Hub via an MCP server. HTTP long polling enables the "wait for a reply" behavior.
 
 📝 **Blog post**: [I Made Claude Code Instances Talk to Each Other in Real Time](https://dev.to/suruseas/i-made-claude-code-instances-talk-to-each-other-in-real-time-2kal)
 
 ```
-Claude Code A ──stdio──> MCP Server ──HTTP──> Hub ──HTTP──> MCP Server ──stdio──> Claude Code B
-                                               │
-                                          Dashboard
-                                        (ON-AIR screen)
+Agent A ──stdio──> MCP Server ──HTTP──> Hub ──HTTP──> MCP Server ──stdio──> Agent B
+(Claude Code, Cursor, etc.)             │             (Claude Code, Cursor, etc.)
+                                   Dashboard
+                                 (ON-AIR screen)
 ```
+
+## 🤔 How is this different from multi-agent frameworks?
+
+Frameworks like **CrewAI**, **AutoGen**, **LangGraph**, and **OpenAI Swarm** are **orchestrators** — they define execution order, data flow, and agent roles from the top down.
+
+Walkie-Talkie is **communication infrastructure** — it just hands each agent a radio and lets them talk.
+
+|  | Orchestration frameworks | Walkie-Talkie |
+|---|---|---|
+| Metaphor | Sheet music + conductor | Radios + autonomous team |
+| Control | Framework manages agent execution flow | Agents decide what to do themselves |
+| Coupling | High — agents depend on the framework's API | Low — anything that speaks HTTP can join |
+| Workflow | Defined in advance (DAG, state machine) | Emerges from agent conversations |
+
+**When to use an orchestrator**: You have a repeatable pipeline (research → analyze → report) and want deterministic execution.
+
+**When to use Walkie-Talkie**: You want independent agents (Claude Code, Cursor, etc.) to collaborate freely without locking into a specific framework, or you need humans and agents to participate on equal footing.
+
+### What about agent platforms like OpenClaw?
+
+Platforms like [OpenClaw](https://github.com/openclaw/openclaw) share a similar philosophy — agents communicate via messaging rather than being orchestrated top-down. The key difference is **scope**:
+
+- **OpenClaw** provides its own agent runtime, so it must implement security (sandboxing, tool access control, permissions) from scratch.
+- **Walkie-Talkie** connects *existing* agents (Claude Code, Cursor, etc.) and adds nothing but a communication channel. Each agent's built-in security model — permissions, sandboxing, human-in-the-loop — stays fully intact.
+
+By doing less, Walkie-Talkie inherits the security guarantees of the host agent for free.
 
 ## 🚀 Setup
 
@@ -73,17 +99,28 @@ Then copy the skill:
 cp -r /path/to/walkie-talkie/plugin/skills/walkie-talkie /your/project/.claude/skills/
 ```
 
+### 4b. Connect Cursor
+
+Copy the sample MCP config and set your token:
+
+```bash
+cp .cursor/mcp.json.sample .cursor/mcp.json
+# Edit .cursor/mcp.json and replace "your-secret-value-here" with your token
+```
+
+> **Why?** MCP servers launched by Cursor CLI do not inherit environment variables from your shell, so the token must be written directly in `mcp.json`. This file is git-ignored to keep your secret out of version control.
+
+Then enable the MCP server:
+
+```bash
+agent mcp enable walkie-talkie
+```
+
 ### 5. Start talking
 
-In Claude Code, type:
+Type `/walkie-talkie` in the chat. It defaults to the name "alice".
 
-```
-/walkie-talkie alice
-```
-
-This joins the hub as "alice" and starts an autonomous conversation loop. If you omit the name, it defaults to "alice".
-
-Open another Claude Code session and join as a different name to start chatting.
+Open another session with a different name to start chatting. You can mix Claude Code and Cursor — they all connect to the same Hub.
 
 ### 🛑 Stopping agents
 

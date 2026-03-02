@@ -8,8 +8,8 @@
     {
       "name": "walkie-talkie",
       "source": "./plugin",
-      "description": "Real-time messaging between Claude Code instances",
-      "version": "1.0.0",
+      "description": "A lightweight communication layer for AI agents",
+      "version": "1.1.0",
       "author": {
         "name": "suruseas"
       }

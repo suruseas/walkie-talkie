@@ -26,6 +26,8 @@ return `<!DOCTYPE html>
     --red: #f87171;
     --red-soft: rgba(248,113,113,0.1);
     --red-border: rgba(248,113,113,0.2);
+    --yellow: #fbbf24;
+    --yellow-soft: rgba(251,191,36,0.12);
     --radius: 10px;
     --font: 'DM Sans', -apple-system, sans-serif;
     --mono: 'Geist Mono', ui-monospace, monospace;
@@ -118,7 +120,13 @@ return `<!DOCTYPE html>
     box-shadow: 0 0 6px var(--red);
   }
   .header-spacer { flex: 1; }
-  .clear-btn {
+  #channel-header {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+  .clear-btn, .filter-btn {
     font-family: var(--mono);
     font-size: 11px;
     font-weight: 500;
@@ -130,13 +138,21 @@ return `<!DOCTYPE html>
     cursor: pointer;
     transition: all 0.15s ease;
   }
-  .clear-btn:hover {
+  .clear-btn:hover, .filter-btn:hover {
     color: var(--text-secondary);
     border-color: rgba(255,255,255,0.1);
     background: var(--bg-hover);
   }
-  .clear-btn:active {
+  .clear-btn:active, .filter-btn:active {
     transform: scale(0.97);
+  }
+  .filter-btn.active {
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-color: rgba(129,140,248,0.3);
+  }
+  body.filter-operator .msg:not(.operator):not(.system) {
+    opacity: 0.3;
   }
 
   /* Main */
@@ -156,6 +172,7 @@ return `<!DOCTYPE html>
     display: flex;
     flex-direction: column;
     gap: 12px;
+    overflow-y: auto;
   }
   .sidebar-label {
     font-size: 11px;
@@ -164,7 +181,95 @@ return `<!DOCTYPE html>
     letter-spacing: 0.06em;
     color: var(--text-tertiary);
     padding: 0 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
   }
+  .sidebar-label .add-btn {
+    font-family: var(--mono);
+    font-size: 11px;
+    background: transparent;
+    color: var(--text-tertiary);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    line-height: 18px;
+  }
+  .sidebar-label .add-btn:hover {
+    color: var(--accent);
+    border-color: rgba(129,140,248,0.3);
+    background: var(--accent-soft);
+  }
+
+  /* Channel list */
+  #channel-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  #channel-list li {
+    padding: 6px 8px;
+    font-family: var(--mono);
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    color: var(--text-secondary);
+  }
+  #channel-list li:hover {
+    background: var(--bg-hover);
+  }
+  #channel-list li.active {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+  .channel-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .channel-badge {
+    font-size: 10px;
+    background: var(--bg-surface);
+    color: var(--text-tertiary);
+    padding: 1px 6px;
+    border-radius: 100px;
+    flex-shrink: 0;
+  }
+  #channel-list li.active .channel-badge {
+    background: rgba(129,140,248,0.2);
+    color: var(--accent);
+  }
+  .channel-del {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-tertiary);
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    opacity: 0;
+    flex-shrink: 0;
+    margin-left: 4px;
+  }
+  #channel-list li:hover .channel-del {
+    opacity: 1;
+  }
+  .channel-del:hover {
+    border-color: var(--red-border);
+    color: var(--red);
+    background: var(--red-soft);
+  }
+
+  /* User list */
   #user-list {
     list-style: none;
     flex: 1;
@@ -277,6 +382,15 @@ return `<!DOCTYPE html>
     color: var(--text-tertiary);
     margin-right: 8px;
   }
+  .msg .channel-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--yellow);
+    background: var(--yellow-soft);
+    padding: 1px 6px;
+    border-radius: 4px;
+    margin-right: 6px;
+  }
   .msg .from {
     font-weight: 600;
     color: var(--accent);
@@ -300,6 +414,15 @@ return `<!DOCTYPE html>
   .msg.message:hover {
     border-color: var(--border);
   }
+  .msg.operator {
+    background: var(--accent-soft);
+    border-color: rgba(129,140,248,0.18);
+    border-left: 3px solid var(--accent);
+  }
+  .msg.operator:hover {
+    border-color: rgba(129,140,248,0.3);
+    border-left-color: var(--accent);
+  }
   .msg.system {
     background: transparent;
     font-size: 15px;
@@ -319,6 +442,9 @@ return `<!DOCTYPE html>
   }
   .msg.system.leave::before {
     background: var(--red);
+  }
+  .msg.system.channel-event::before {
+    background: var(--yellow);
   }
   .msg.system strong {
     color: var(--text-secondary);
@@ -412,6 +538,10 @@ return `<!DOCTYPE html>
     cursor: default;
   }
 
+  .msg.hidden-by-filter {
+    display: none;
+  }
+
   @keyframes slideIn {
     from { opacity: 0; transform: translateY(6px); }
     to   { opacity: 1; transform: translateY(0); }
@@ -428,11 +558,15 @@ return `<!DOCTYPE html>
     </div>
     <div class="header-sep"></div>
     <span id="status">connected</span>
+    <span id="channel-header"></span>
     <div class="header-spacer"></div>
+    <button class="filter-btn" id="filter-btn">My messages</button>
     <button class="clear-btn" id="clear-btn">Clear</button>
   </header>
   <div class="container">
     <div id="sidebar">
+      <span class="sidebar-label">Channels <button class="add-btn" id="add-channel-btn">+ New</button></span>
+      <ul id="channel-list"></ul>
       <span class="sidebar-label">On Air</span>
       <ul id="user-list"></ul>
       <button id="stop-all">Stop All</button>
@@ -442,6 +576,9 @@ return `<!DOCTYPE html>
         <div class="empty">Waiting for transmissions...</div>
       </div>
       <div class="input-bar">
+        <select id="send-channel">
+          <option value="#all">#all</option>
+        </select>
         <select id="send-to">
           <option value="@all">@all</option>
         </select>
@@ -455,8 +592,13 @@ return `<!DOCTYPE html>
     const adminHeaders = { "Content-Type": "application/json", "Authorization": "Bearer " + ADMIN_TOKEN };
     const messagesEl = document.getElementById("messages");
     const userListEl = document.getElementById("user-list");
+    const channelListEl = document.getElementById("channel-list");
     const statusEl = document.getElementById("status");
+    const channelHeaderEl = document.getElementById("channel-header");
     const users = new Set();
+    const channels = new Map(); // name -> { memberCount, createdBy }
+
+    let selectedChannel = "#all";
 
     function formatTime(ts) {
       return new Date(ts).toLocaleTimeString();
@@ -497,11 +639,71 @@ return `<!DOCTYPE html>
       if (typeof updateSendTo === "function") updateSendTo();
     }
 
-    function addMessage(html, cls) {
+    function refreshChannels() {
+      fetch("/channels").then(r => r.json()).then(data => {
+        channels.clear();
+        for (const ch of data.channels) {
+          channels.set(ch.name, { memberCount: ch.memberCount, createdBy: ch.createdBy });
+        }
+        renderChannels();
+      }).catch(() => {});
+    }
+
+    function renderChannels() {
+      channelListEl.innerHTML = "";
+      for (const [name, info] of channels) {
+        const li = document.createElement("li");
+        const badge = '<span class="channel-badge">' + (info.memberCount || 0) + '</span>';
+        if (name === "#all") {
+          li.innerHTML = '<span class="channel-name">' + name + '</span>' + badge;
+        } else {
+          li.innerHTML = '<span class="channel-name">' + name + '</span>' + badge + '<button class="channel-del">x</button>';
+          li.querySelector(".channel-del").onclick = (e) => {
+            e.stopPropagation();
+            if (confirm("Delete " + name + "?")) deleteChannel(name);
+          };
+        }
+        if (selectedChannel === name) li.className = "active";
+        li.onclick = () => selectChannel(name);
+        channelListEl.appendChild(li);
+      }
+      updateSendChannel();
+    }
+
+    function selectChannel(name) {
+      selectedChannel = name;
+      channelHeaderEl.textContent = name ? name : "";
+      renderChannels();
+      applyChannelFilter();
+    }
+
+    function applyChannelFilter() {
+      const msgs = messagesEl.querySelectorAll(".msg");
+      for (const msg of msgs) {
+        if (!selectedChannel) {
+          msg.classList.remove("hidden-by-filter");
+        } else {
+          const ch = msg.dataset.channel;
+          if (!ch) {
+            msg.classList.remove("hidden-by-filter");
+          } else if (ch === selectedChannel) {
+            msg.classList.remove("hidden-by-filter");
+          } else {
+            msg.classList.add("hidden-by-filter");
+          }
+        }
+      }
+    }
+
+    function addMessage(html, cls, channel) {
       clearEmpty();
       const div = document.createElement("div");
       div.className = "msg " + cls;
+      if (channel) div.dataset.channel = channel;
       div.innerHTML = html;
+      if (selectedChannel && channel && channel !== selectedChannel) {
+        div.classList.add("hidden-by-filter");
+      }
       messagesEl.appendChild(div);
       scrollBottom();
     }
@@ -511,6 +713,7 @@ return `<!DOCTYPE html>
     };
 
     // Send from dashboard
+    const sendChannelEl = document.getElementById("send-channel");
     const sendToEl = document.getElementById("send-to");
     const sendInputEl = document.getElementById("send-input");
     const sendBtnEl = document.getElementById("send-btn");
@@ -529,13 +732,31 @@ return `<!DOCTYPE html>
       }
     }
 
+    function updateSendChannel() {
+      const current = sendChannelEl.value;
+      sendChannelEl.innerHTML = "";
+      for (const [name] of channels) {
+        const opt = document.createElement("option");
+        opt.value = name;
+        opt.textContent = name;
+        sendChannelEl.appendChild(opt);
+      }
+      if ([...sendChannelEl.options].some(o => o.value === current)) {
+        sendChannelEl.value = current;
+      }
+      if (selectedChannel && [...sendChannelEl.options].some(o => o.value === selectedChannel)) {
+        sendChannelEl.value = selectedChannel;
+      }
+    }
+
     function sendMessage() {
       const content = sendInputEl.value.trim();
       if (!content) return;
+      const channel = sendChannelEl.value || "#all";
       fetch("/admin-send", {
         method: "POST",
         headers: adminHeaders,
-        body: JSON.stringify({ to: sendToEl.value, content }),
+        body: JSON.stringify({ to: sendToEl.value, content, channel }),
       }).then(() => {
         sendInputEl.value = "";
         sendInputEl.style.height = "auto";
@@ -548,25 +769,60 @@ return `<!DOCTYPE html>
     sendInputEl.addEventListener("keydown", (e) => {
       if (e.key !== "Enter" || e.isComposing) return;
       if (!e.shiftKey && !e.metaKey) { e.preventDefault(); sendMessage(); }
-      // Shift+Enter: let browser insert newline naturally
     });
 
-    // Auto-resize textarea
     sendInputEl.addEventListener("input", () => {
       sendInputEl.style.height = "auto";
       sendInputEl.style.height = Math.min(sendInputEl.scrollHeight, 120) + "px";
       sendInputEl.style.overflowY = sendInputEl.scrollHeight > 120 ? "auto" : "hidden";
     });
 
+    // Filter toggle
+    const filterBtn = document.getElementById("filter-btn");
+    filterBtn.onclick = () => {
+      document.body.classList.toggle("filter-operator");
+      filterBtn.classList.toggle("active");
+    };
+
     // Clear button
     document.getElementById("clear-btn").onclick = () => {
       messagesEl.innerHTML = '<div class="empty">Waiting for transmissions...</div>';
     };
 
-    // Fetch initial user list
+    // Add channel button
+    document.getElementById("add-channel-btn").onclick = () => {
+      const name = prompt("Channel name (without #):");
+      if (!name || !name.trim()) return;
+      fetch("/admin-channel-create", {
+        method: "POST",
+        headers: adminHeaders,
+        body: JSON.stringify({ name: name.trim() }),
+      }).then(r => r.json()).then(data => {
+        if (data.error) alert(data.error);
+      }).catch(() => {});
+    };
+
+    function deleteChannel(name) {
+      fetch("/admin-channel-delete", {
+        method: "POST",
+        headers: adminHeaders,
+        body: JSON.stringify({ name }),
+      }).then(r => r.json()).then(data => {
+        if (data.error) alert(data.error);
+      }).catch(() => {});
+    }
+
+    // Fetch initial data
     fetch("/users").then(r => r.json()).then(data => {
       for (const u of data.users) users.add(u);
       renderUsers();
+    }).catch(() => {});
+
+    fetch("/channels").then(r => r.json()).then(data => {
+      for (const ch of data.channels) {
+        channels.set(ch.name, { memberCount: ch.memberCount, createdBy: ch.createdBy });
+      }
+      renderChannels();
     }).catch(() => {});
 
     const es = new EventSource("/events");
@@ -577,26 +833,67 @@ return `<!DOCTYPE html>
       if (ev.type === "join") {
         users.add(ev.name);
         renderUsers();
+        refreshChannels();
         addMessage(
           '<span class="time">' + formatTime(ev.timestamp) + '</span>' +
           '<strong>' + ev.name + '</strong> joined the channel',
-          "system"
+          "system",
+          null
         );
       } else if (ev.type === "leave") {
         users.delete(ev.name);
         renderUsers();
+        refreshChannels();
         addMessage(
           '<span class="time">' + formatTime(ev.timestamp) + '</span>' +
           '<strong>' + ev.name + '</strong> left the channel',
-          "system leave"
+          "system leave",
+          null
         );
       } else if (ev.type === "message") {
+        const cls = ev.from === "operator" ? "message operator" : "message";
+        const channelTag = '<span class="channel-tag">' + (ev.channel || "#all") + '</span>';
         addMessage(
           '<span class="time">' + formatTime(ev.timestamp) + '</span>' +
+          channelTag +
           '<span class="from">' + ev.from + '</span> ' +
           '<span class="to">&rarr; ' + ev.to + '</span>' +
           '<div class="content">' + ev.content.replace(/</g, "&lt;") + '</div>',
-          "message"
+          cls,
+          ev.channel || "#all"
+        );
+      } else if (ev.type === "channel_create") {
+        refreshChannels();
+        addMessage(
+          '<span class="time">' + formatTime(ev.timestamp) + '</span>' +
+          'Channel <strong>' + ev.name + '</strong> created',
+          "system channel-event",
+          null
+        );
+      } else if (ev.type === "channel_join") {
+        refreshChannels();
+        addMessage(
+          '<span class="time">' + formatTime(ev.timestamp) + '</span>' +
+          '<strong>' + ev.userName + '</strong> joined <strong>' + ev.channel + '</strong>',
+          "system channel-event",
+          ev.channel
+        );
+      } else if (ev.type === "channel_leave") {
+        refreshChannels();
+        addMessage(
+          '<span class="time">' + formatTime(ev.timestamp) + '</span>' +
+          '<strong>' + ev.userName + '</strong> left <strong>' + ev.channel + '</strong>',
+          "system channel-event leave",
+          ev.channel
+        );
+      } else if (ev.type === "channel_delete") {
+        if (selectedChannel === ev.name) selectedChannel = "#all";
+        refreshChannels();
+        addMessage(
+          '<span class="time">' + formatTime(ev.timestamp) + '</span>' +
+          'Channel <strong>' + ev.name + '</strong> deleted',
+          "system channel-event leave",
+          null
         );
       }
     };

@@ -5,6 +5,7 @@ export interface Message {
   from: string;
   to: string;
   content: string;
+  channel: string;
   timestamp: number;
 }
 
@@ -26,6 +27,13 @@ export interface RegisterResponse {
 export interface SendRequest {
   to: string;
   content: string;
+  channel?: string;
+}
+
+export interface Channel {
+  name: string;
+  createdBy: string;
+  createdAt: number;
 }
 
 export interface SendResponse {
