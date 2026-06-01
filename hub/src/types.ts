@@ -58,7 +58,7 @@ export interface PollResponse {
 }
 
 export interface UsersResponse {
-  users: string[];
+  users: Array<{ name: string; online: boolean; role: string }>;
 }
 
 export interface ErrorResponse {

@@ -195,8 +195,12 @@ export class HubClient {
     return res.data;
   }
 
-  async users(token: string): Promise<string[]> {
-    const res = await this.request<{ users: string[] }>({
+  async users(token: string): Promise<Array<{ name: string; online: boolean; role: string }>> {
+    // The hub's GET /users returns objects ({ name, online, role }), not bare
+    // strings — see hub handleUsers + its api-register/api-admin tests. The
+    // prior `string[]` typing was wrong and caused callers to render
+    // "[object Object]" when joining the array.
+    const res = await this.request<{ users: Array<{ name: string; online: boolean; role: string }> }>({
       method: "GET",
       path: "/users",
       token,

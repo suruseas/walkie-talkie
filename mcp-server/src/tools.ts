@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { HubClient } from "./client.js";
+import { formatConnectedUsers, resolveWaitScript } from "./helpers.js";
 
 const MIME_TYPES: Record<string, string> = {
   ".png": "image/png",
@@ -337,7 +338,7 @@ export function createMcpServer(hubUrl: string, joinTok: string): McpServer {
       }
       try {
         const [users, channels] = await Promise.all([client.users(currentToken), client.listChannels(currentToken)]);
-        const userText = users.length > 0 ? `Connected users: ${users.join(", ")}` : "No users connected.";
+        const userText = formatConnectedUsers(users);
         const channelText =
           channels.length > 0
             ? `Channels: ${channels.map((c) => `${c.name} (${c.memberCount} members)`).join(", ")}`
@@ -493,8 +494,7 @@ export function createMcpServer(hubUrl: string, joinTok: string): McpServer {
           isError: true,
         };
       }
-      const thisFile = fileURLToPath(import.meta.url);
-      const waitScript = path.resolve(path.dirname(thisFile), "..", "bin", "radio-wait.sh");
+      const waitScript = resolveWaitScript(path.dirname(fileURLToPath(import.meta.url)));
       return {
         content: [
           {
